@@ -86,30 +86,19 @@ local function setup_key_mappings()
         vim.api.nvim_set_keymap(mode, lhs, rhs, options)
     end
 
-    -- Buffer navigation
-    map('n', 'T', ':bnext<CR>')
-    map('n', 'F', ':buffers<CR>')
-
     -- Tab navigation
     map('n', '<C-j>', 'gt<CR>')
     map('n', '<C-k>', 'gT<CR>')
 
     -- Function keys
-    map('n', '<F3>', ':cs find s <C-R>=expand("<cword>")<CR><CR>')
-    map('n', '<F4>', ':qa<CR>')
-    map('n', '<F5>', ':silent! cs kill 0<CR> :mapclear<CR> :source ~/.config/nvim/init.lua<CR> cs add cscope.out<CR>')
-    map('n', '<F6>', ':NERDTreeToggle<CR>')
-    map('n', '<F8>', ':TagbarToggle<CR>')
-    map('n', '<F10>', '<C-w>|<C-w>_')
-    map('n', '<S-F10>', '<C-w>=')
-    map('n', '<F12>', ':lua ToggleLineNumber()<CR>')
+    map('n', '<F4>', ':qa!<CR>')
+    map('n', '<F5>', ':luafile ~/.config/nvim/init.lua<CR>')
 
     -- Search and replace
     map('n', '<C-G>', '<Esc>:echo expand("%:p")<CR>')
 
     -- Grep
-    map('n', 'GG', ':grep "\\<<C-R><C-W>\\>" * -rn --color<CR>:copen 10<CR>')
-    map('n', 'GC', ':cclose<CR>')
+    map('n', 'GG', ':grep "\\<<C-R><C-W>\\>" * -rn --color<CR>:copen<CR>')
 
     -- LSP key mappings
     map('n', '<F12>', '<cmd>lua vim.lsp.buf.definition()<CR>')
@@ -127,10 +116,10 @@ local function setup_key_mappings()
 
     -- Telescope key mappings
     map('n', '<C-p>', '<cmd>Telescope find_files<CR>')
-    map('n', '<leader>f', '<cmd>Telescope find_files<CR>')
-    map('n', '<leader>g', '<cmd>Telescope live_grep<CR>')
-    map('n', '<leader>b', '<cmd>Telescope buffers<CR>')
-    map('n', '<leader>h', '<cmd>Telescope help_tags<CR>')
+    map('n', '<leader><leader>f', '<cmd>Telescope find_files<CR>')
+    map('n', '<leader><leader>g', '<cmd>Telescope live_grep<CR>')
+    map('n', '<leader><leader>b', '<cmd>Telescope buffers<CR>')
+    map('n', '<leader><leader>h', '<cmd>Telescope help_tags<CR>')
 
     -- NERDTree key mapping
     map('n', '<leader>n', ':NERDTreeFind<CR> :wincmd p<CR>')

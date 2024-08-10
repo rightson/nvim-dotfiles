@@ -54,12 +54,12 @@ The main configuration file is `~/.config/nvim/init.lua`. You can modify this fi
 Here are some of the key mappings included in this configuration:
 
 ### General
-- `T`: Next buffer
-- `F`: List buffers
 - `<C-j>`: Next tab
 - `<C-k>`: Previous tab
+- `<C-g>`: Show current file's absolute path
 - `<F4>`: Quit all
 - `<F5>`: Reload configuration
+- `GG`: Grep current word
 
 ### LSP
 - `<F12>` or `gd`: Go to definition
@@ -76,9 +76,9 @@ Here are some of the key mappings included in this configuration:
 
 ### Telescope
 - `<C-p>` or `<leader>f`: Find files
-- `<leader>g`: Live grep
-- `<leader>b`: List buffers
-- `<leader>h`: Help tags
+- `<leader><header>g`: Live grep
+- `<leader><header>b`: List buffers
+- `<leader><header>h`: Help tags
 
 ### Other Plugins
 - `<F6>` or `<leader>n`: Toggle NERDTree
