@@ -110,6 +110,36 @@ local function setup_key_mappings()
     -- Grep
     map('n', 'GG', ':grep "\\<<C-R><C-W>\\>" * -rn --color<CR>:copen 10<CR>')
     map('n', 'GC', ':cclose<CR>')
+
+    -- LSP key mappings
+    map('n', '<F12>', '<cmd>lua vim.lsp.buf.definition()<CR>')
+    map('n', 'gd', '<cmd>lua vim.lsp.buf.definition()<CR>')
+    map('n', 'K', '<cmd>lua vim.lsp.buf.hover()<CR>')
+    map('n', 'gi', '<cmd>lua vim.lsp.buf.implementation()<CR>')
+    map('n', 'gr', '<cmd>lua vim.lsp.buf.references()<CR>')
+    map('n', 'gf', '<cmd>lua vim.lsp.buf.format()<CR>')
+
+    -- hop.nvim key mappings
+    map('n', '<leader>w', ':HopWord<CR>')
+    map('n', '<leader>l', ':HopLine<CR>')
+    map('n', '<leader>c', ':HopChar1<CR>')
+    map('n', '<leader>cc', ':HopChar2<CR>')
+
+    -- Telescope key mappings
+    map('n', '<C-p>', '<cmd>Telescope find_files<CR>')
+    map('n', '<leader>f', '<cmd>Telescope find_files<CR>')
+    map('n', '<leader>g', '<cmd>Telescope live_grep<CR>')
+    map('n', '<leader>b', '<cmd>Telescope buffers<CR>')
+    map('n', '<leader>h', '<cmd>Telescope help_tags<CR>')
+
+    -- NERDTree key mapping
+    map('n', '<leader>n', ':NERDTreeFind<CR> :wincmd p<CR>')
+
+    -- TagBar key mapping
+    map('n', '<leader>t', ':TagbarToggle<CR>')
+
+    -- Neo-Zoom key mapping
+    map('n', '<leader>z', ':NeoZoomToggle<CR>')
 end
 
 -- Plugin Configurations
