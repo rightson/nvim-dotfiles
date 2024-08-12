@@ -15,11 +15,12 @@ function Invoke-CommandWithEcho {
 }
 
 function Show-Usage {
-    Write-Host "Usage: .\manage.ps1 {pack|unpack [path_to_package]} [-y]"
+    Write-Host "Usage: .\manage.ps1 {pack|unpack [path_to_package]} [-y] [-linux]"
     Write-Host "  pack                     Create an offline package of Neovim configuration"
     Write-Host "  unpack [path_to_package] Extract and install the offline package"
     Write-Host "                           If path is not specified, uses $packageName in the script directory"
     Write-Host "  -y                       Force overwrite without prompting"
+    Write-Host "  -linux                   Create a Linux-compatible tarball (for pack operation only)"
 }
 
 function Download-PlugVim {
@@ -40,6 +41,9 @@ function Run-PlugCommands {
 }
 
 function Pack-NvimConfig {
+    param([switch]$LinuxCompatible)
+    
+    $packageName = if ($LinuxCompatible) { "nvim-dotfile-offline-linux.zip" } else { "nvim-dotfile-offline.zip" }
     Write-Host "Creating offline package..."
     Write-Host "Source paths:"
     Write-Host "  init.lua: $packInitLuaPath"
@@ -55,19 +59,47 @@ function Pack-NvimConfig {
     Run-PlugCommands $packInitLuaPath
 
     $tempDir = Join-Path $env:TEMP ([System.Guid]::NewGuid().ToString())
-    Invoke-CommandWithEcho "New-Item -Path '$tempDir\nvim' -ItemType Directory -Force | Out-Null"
-    Invoke-CommandWithEcho "New-Item -Path '$tempDir\nvim-data\site\autoload' -ItemType Directory -Force | Out-Null"
+    
+    # Create directory structure
+    $nvimDir = Join-Path $tempDir "nvim"
+    $nvimDataDir = Join-Path $tempDir "nvim-data"
+    $nvimPluggedDir = Join-Path $nvimDataDir "plugged"
+    $nvimAutoloadDir = Join-Path $nvimDataDir "site/autoload"
 
-    Invoke-CommandWithEcho "Copy-Item '$packInitLuaPath' '$tempDir\nvim\init.lua'"
-    Invoke-CommandWithEcho "Copy-Item '$plugVimPath' '$tempDir\nvim-data\site\autoload\plug.vim'"
+    New-Item -Path $nvimDir, $nvimAutoloadDir -ItemType Directory -Force | Out-Null
+
+    # Copy files
+    Copy-Item $packInitLuaPath (Join-Path $nvimDir "init.lua")
+    Copy-Item $plugVimPath (Join-Path $nvimAutoloadDir "plug.vim")
 
     # Copy plugged directory excluding .git directories
-    Invoke-CommandWithEcho "New-Item -Path '$tempDir\nvim-data\plugged' -ItemType Directory -Force | Out-Null"
-    Invoke-CommandWithEcho "robocopy '$pluggedPath' '$tempDir\nvim-data\plugged' /E /XD '.git' | Out-Null"
+    robocopy $pluggedPath $nvimPluggedDir /E /XD '.git' | Out-Null
 
     $packagePath = Join-Path $scriptDir $packageName
-    Invoke-CommandWithEcho "Compress-Archive -Path '$tempDir\*' -DestinationPath '$packagePath' -Force"
-    Invoke-CommandWithEcho "Remove-Item -Recurse -Force '$tempDir'"
+
+    # Create zip archive
+    if ($LinuxCompatible) {
+        # Use .NET IO.Compression for Linux-compatible paths
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $compressionLevel = [System.IO.Compression.CompressionLevel]::Optimal
+        $includeBaseDirectory = $false
+
+        [System.IO.Compression.ZipFile]::CreateFromDirectory($tempDir, $packagePath, $compressionLevel, $includeBaseDirectory)
+
+        # Manually fix the directory separator for Linux compatibility
+        $zip = [System.IO.Compression.ZipFile]::Open($packagePath, 'Update')
+        foreach ($entry in $zip.Entries) {
+            if ($entry.FullName.Contains('\')) {
+                $newFullName = $entry.FullName.Replace('\', '/')
+                $entry.LastWriteTime = [DateTimeOffset]::Now
+            }
+        }
+        $zip.Dispose()
+    } else {
+        Compress-Archive -Path "$tempDir\*" -DestinationPath $packagePath -Force
+    }
+
+    Remove-Item -Recurse -Force $tempDir
 
     Write-Host "Offline package created successfully: $packagePath"
 }
@@ -124,10 +156,11 @@ switch ($args[0]) {
             Write-Host "Error: Neovim is not installed or not in PATH. Please install Neovim first."
             exit 1
         }
-        Pack-NvimConfig
+        $linuxOption = $args -contains "-linux"
+        Pack-NvimConfig -LinuxCompatible:$linuxOption
     }
     "unpack" {
-        $packagePath = if ($args.Count -gt 1) { 
+        $packagePath = if ($args.Count -gt 1 -and $args[1] -ne "-y") { 
             if ([System.IO.Path]::IsPathRooted($args[1])) {
                 $args[1]
             } else {
