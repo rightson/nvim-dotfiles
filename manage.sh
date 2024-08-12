@@ -124,9 +124,6 @@ unpack() {
 
     rm -rf "$temp_dir"
     echo "Offline package installation complete."
-
-    # Run PlugClean and PlugInstall with the newly unpacked init.lua
-    run_plug_commands "$UNPACK_INIT_LUA_PATH"
 }
 
 # Main script
