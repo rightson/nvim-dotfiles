@@ -9,7 +9,7 @@ local function setup_plugins()
     Plug('hrsh7th/nvim-cmp')
     Plug('hrsh7th/cmp-path')
     Plug('windwp/nvim-autopairs')
-    Plug('phaazon/hop.nvim')
+    Plug('hadronized/hop.nvim')
     Plug('nvim-lua/plenary.nvim')
     Plug('nvim-telescope/telescope.nvim')
     Plug('preservim/nerdtree')
@@ -38,10 +38,10 @@ local function setup_general_settings()
     vim.o.autoread = true
     vim.o.autowrite = true
     vim.o.clipboard = 'unnamedplus'
-    vim.o.pastetoggle = '<F7>'
+    --- vim.o.pastetoggle = '<F7>'
     vim.o.mouse = 'a'
-    vim.o.vb = true
-    vim.o.t_vb = ''
+    --- vim.o.vb = true
+    --- vim.o.t_vb = ''
     vim.o.ruler = true
     vim.o.wrap = false
     vim.o.linebreak = true
