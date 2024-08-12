@@ -1,190 +1,130 @@
-# PowerShell script to manage Neovim configuration and create/unpack an offline package
+# PowerShell script for managing Neovim offline packages
 
-# Define paths
-$initLuaPath = "$env:LOCALAPPDATA\nvim\init.lua"
+$packInitLuaPath = ".\init.lua"
+$unpackInitLuaPath = "$env:LOCALAPPDATA\nvim\init.lua"
 $plugVimPath = "$env:LOCALAPPDATA\nvim-data\site\autoload\plug.vim"
 $pluggedPath = "$env:LOCALAPPDATA\nvim-data\plugged"
-$defaultPackageName = "nvim-dotfile-offline.zip"
+$packageName = "nvim-dotfile-offline.zip"
 
-# Function to show usage
 function Show-Usage {
-    Write-Host "Usage: $($MyInvocation.MyCommand.Name) {create-pack|unpack [path_to_package]} [-y]"
-    Write-Host "  create-pack              Create an offline package of Neovim configuration"
+    Write-Host "Usage: .\manage.ps1 {pack|unpack [path_to_package]} [-y]"
+    Write-Host "  pack                     Create an offline package of Neovim configuration"
     Write-Host "  unpack [path_to_package] Extract and install the offline package"
-    Write-Host "                           If path is not specified, uses $defaultPackageName"
+    Write-Host "                           If path is not specified, uses $packageName"
     Write-Host "  -y                       Force overwrite without prompting"
 }
 
-# Function to download plug.vim
 function Download-PlugVim {
     if (Test-Path $plugVimPath) {
         Write-Host "plug.vim already exists. Skipping download."
     }
     else {
         Write-Host "Downloading plug.vim..."
-        $plugVimUrl = "https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
         New-Item -Path (Split-Path $plugVimPath) -ItemType Directory -Force | Out-Null
-        Invoke-WebRequest -Uri $plugVimUrl -OutFile $plugVimPath
+        Invoke-WebRequest -Uri "https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim" -OutFile $plugVimPath
     }
 }
 
-# Function to run PlugInstall
-function Run-PlugInstall {
-    if (Test-Path $pluggedPath) {
-        if ((Get-ChildItem $pluggedPath).Count -gt 0) {
-            Write-Host "Plugins already installed. Skipping PlugInstall."
-            return
-        }
-    }
-    Write-Host "Running :PlugInstall..."
-    & nvim --headless +PlugInstall +qall
+function Run-PlugCommands {
+    param($initLuaPath)
+    Write-Host "Running :PlugClean and :PlugInstall..."
+    nvim --headless -u $initLuaPath +PlugClean! +PlugInstall +qall
 }
 
-# Function to create offline package
-function Create-Pack {
+function Pack-NvimConfig {
     Write-Host "Creating offline package..."
     Write-Host "Source paths:"
-    Write-Host "  init.lua: $initLuaPath"
+    Write-Host "  init.lua: $packInitLuaPath"
     Write-Host "  plug.vim: $plugVimPath"
     Write-Host "  plugged:  $pluggedPath"
-    
-    $tempDir = New-Item -ItemType Directory -Path "$env:TEMP\nvim-offline-package" -Force
-    $tempNvimDir = New-Item -ItemType Directory -Path "$tempDir\nvim" -Force
-    $tempNvimDataDir = New-Item -ItemType Directory -Path "$tempDir\nvim-data" -Force
-    $tempAutoloadDir = New-Item -ItemType Directory -Path "$tempNvimDataDir\site\autoload" -Force
 
-    Copy-Item $initLuaPath -Destination "$tempNvimDir\init.lua"
-    Copy-Item $plugVimPath -Destination "$tempAutoloadDir\plug.vim"
-    Copy-Item $pluggedPath -Destination "$tempNvimDataDir\plugged" -Recurse
-
-    Compress-Archive -Path "$tempDir\*" -DestinationPath $defaultPackageName -Force
-    Remove-Item $tempDir -Recurse -Force
-
-    Write-Host "Offline package created successfully: $defaultPackageName"
-}
-
-# Function to unpack and install offline package
-function Unpack-Package {
-    param (
-        [string]$PackagePath = $defaultPackageName,
-        [switch]$Force
-    )
-
-    if (!(Test-Path $PackagePath)) {
-        Write-Host "Error: $PackagePath not found."
+    if (-not (Test-Path $packInitLuaPath)) {
+        Write-Host "Error: init.lua not found at $packInitLuaPath"
         exit 1
     }
-    Write-Host "Unpacking and installing offline package from $PackagePath..."
+
+    Download-PlugVim
+    Run-PlugCommands $packInitLuaPath
+
+    $tempDir = Join-Path $env:TEMP ([System.Guid]::NewGuid().ToString())
+    New-Item -Path "$tempDir\nvim" -ItemType Directory -Force | Out-Null
+    New-Item -Path "$tempDir\nvim-data\site\autoload" -ItemType Directory -Force | Out-Null
+
+    Copy-Item $packInitLuaPath "$tempDir\nvim\init.lua"
+    Copy-Item $plugVimPath "$tempDir\nvim-data\site\autoload\plug.vim"
+
+    # Copy plugged directory excluding .git directories
+    robocopy $pluggedPath "$tempDir\nvim-data\plugged" /E /XD ".git" | Out-Null
+
+    Compress-Archive -Path "$tempDir\*" -DestinationPath $packageName -Force
+    Remove-Item -Recurse -Force $tempDir
+
+    Write-Host "Offline package created successfully: $packageName"
+}
+
+function Unpack-NvimConfig {
+    param(
+        [string]$packagePath = $packageName,
+        [switch]$forceOverwrite
+    )
+
+    if (-not (Test-Path $packagePath)) {
+        Write-Host "Error: $packagePath not found."
+        exit 1
+    }
+
+    Write-Host "Unpacking and installing offline package from $packagePath..."
     Write-Host "Destination paths:"
-    Write-Host "  init.lua: $initLuaPath"
+    Write-Host "  init.lua: $unpackInitLuaPath"
     Write-Host "  plug.vim: $plugVimPath"
     Write-Host "  plugged:  $pluggedPath"
 
-    if (-not $Force) {
+    if (-not $forceOverwrite) {
         $confirm = Read-Host "Do you want to overwrite existing files? (y/N)"
-        if ($confirm -notmatch '^[yY]$') {
+        if ($confirm -ne "y" -and $confirm -ne "Y") {
             Write-Host "Operation cancelled."
             exit 0
         }
     }
-    
-    $tempDir = New-Item -ItemType Directory -Path "$env:TEMP\nvim-offline-package" -Force
 
-    # Extract based on file extension
-    if ($PackagePath -match '\.tar\.gz$') {
-        tar -xzvf $PackagePath -C $tempDir
-    }
-    elseif ($PackagePath -match '\.zip$') {
-        Expand-Archive -Path $PackagePath -DestinationPath $tempDir -Force
-    }
-    else {
-        Write-Host "Error: Unsupported file format. Use .tar.gz or .zip"
-        Remove-Item $tempDir -Recurse -Force
-        exit 1
-    }
+    $tempDir = Join-Path $env:TEMP ([System.Guid]::NewGuid().ToString())
+    Expand-Archive -Path $packagePath -DestinationPath $tempDir
 
-    # Ensure destination directories exist
-    New-Item -Path (Split-Path $initLuaPath) -ItemType Directory -Force | Out-Null
+    New-Item -Path (Split-Path $unpackInitLuaPath) -ItemType Directory -Force | Out-Null
     New-Item -Path (Split-Path $plugVimPath) -ItemType Directory -Force | Out-Null
-    New-Item -Path (Split-Path $pluggedPath) -ItemType Directory -Force | Out-Null
+    New-Item -Path $pluggedPath -ItemType Directory -Force | Out-Null
 
-    # Copy files to their respective locations and verify
-    Copy-Item "$tempDir\nvim\init.lua" -Destination $initLuaPath -Force
-    if (Test-Path $initLuaPath) {
-        Write-Host "✅ init.lua copied successfully."
-    } else {
-        Write-Host "❌ Failed to copy init.lua."
-    }
+    Copy-Item "$tempDir\nvim\init.lua" $unpackInitLuaPath -Force
+    Copy-Item "$tempDir\nvim-data\site\autoload\plug.vim" $plugVimPath -Force
+    robocopy "$tempDir\nvim-data\plugged" $pluggedPath /E | Out-Null
 
-    Copy-Item "$tempDir\nvim-data\site\autoload\plug.vim" -Destination $plugVimPath -Force
-    if (Test-Path $plugVimPath) {
-        Write-Host "✅ plug.vim copied successfully."
-    } else {
-        Write-Host "❌ Failed to copy plug.vim."
-    }
-
-    Copy-Item "$tempDir\nvim-data\plugged" -Destination (Split-Path $pluggedPath) -Recurse -Force
-    if (Test-Path $pluggedPath) {
-        Write-Host "✅ plugged directory copied successfully."
-    } else {
-        Write-Host "❌ Failed to copy plugged directory."
-    }
-
-    Remove-Item $tempDir -Recurse -Force
-
+    Remove-Item -Recurse -Force $tempDir
     Write-Host "Offline package installation complete."
+
+    Run-PlugCommands $unpackInitLuaPath
 }
 
 # Main script
-function Main {
-    param (
-        [Parameter(Mandatory=$false)]
-        [ValidateSet("create-pack", "unpack")]
-        [string]$Action,
-        [Parameter(Mandatory=$false)]
-        [string]$PackagePath,
-        [switch]$Force
-    )
-
-    if (-not $Action) {
-        Show-Usage
-        exit 1
-    }
-
-    switch ($Action) {
-        "create-pack" {
-            if (!(Get-Command nvim -ErrorAction SilentlyContinue)) {
-                Write-Host "Error: Neovim is not installed. Please install Neovim first."
-                exit 1
-            }
-            if (!(Test-Path $initLuaPath)) {
-                Write-Host "Error: init.lua not found at $initLuaPath"
-                exit 1
-            }
-            Download-PlugVim
-            Run-PlugInstall
-            Create-Pack
-        }
-        "unpack" {
-            Unpack-Package -PackagePath $PackagePath -Force:$Force
-        }
-        default {
-            Show-Usage
-            exit 1
-        }
-    }
-}
-
-# Run the main function with command-line arguments
 if ($args.Count -eq 0) {
     Show-Usage
     exit 1
+}
 
-else {
-    $params = @{
-        Action = $args[0]
-        PackagePath = if ($args.Count -gt 1 -and $args[1] -notmatch '^-') { $args[1] } else { $null }
-        Force = $args -contains "-y"
+switch ($args[0]) {
+    "pack" {
+        if (-not (Get-Command nvim -ErrorAction SilentlyContinue)) {
+            Write-Host "Error: Neovim is not installed or not in PATH. Please install Neovim first."
+            exit 1
+        }
+        Pack-NvimConfig
     }
-    Main @params
+    "unpack" {
+        $packagePath = if ($args.Count -gt 1) { $args[1] } else { $packageName }
+        $forceOverwrite = $args -contains "-y"
+        Unpack-NvimConfig -packagePath $packagePath -forceOverwrite:$forceOverwrite
+    }
+    default {
+        Show-Usage
+        exit 1
+    }
 }
