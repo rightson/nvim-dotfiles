@@ -7,6 +7,13 @@ $plugVimPath = "$env:LOCALAPPDATA\nvim-data\site\autoload\plug.vim"
 $pluggedPath = "$env:LOCALAPPDATA\nvim-data\plugged"
 $packageName = "nvim-dotfile-offline.zip"
 
+# Function to echo and execute a command
+function Invoke-CommandWithEcho {
+    param([string]$command)
+    Write-Host "$ $command" -ForegroundColor Cyan
+    Invoke-Expression $command
+}
+
 function Show-Usage {
     Write-Host "Usage: .\manage.ps1 {pack|unpack [path_to_package]} [-y]"
     Write-Host "  pack                     Create an offline package of Neovim configuration"
@@ -21,15 +28,15 @@ function Download-PlugVim {
     }
     else {
         Write-Host "Downloading plug.vim..."
-        New-Item -Path (Split-Path $plugVimPath) -ItemType Directory -Force | Out-Null
-        Invoke-WebRequest -Uri "https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim" -OutFile $plugVimPath
+        Invoke-CommandWithEcho "New-Item -Path (Split-Path $plugVimPath) -ItemType Directory -Force | Out-Null"
+        Invoke-CommandWithEcho "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim' -OutFile '$plugVimPath'"
     }
 }
 
 function Run-PlugCommands {
     param($initLuaPath)
     Write-Host "Running :PlugClean and :PlugInstall..."
-    nvim --headless -u $initLuaPath +PlugClean! +PlugInstall +qall
+    Invoke-CommandWithEcho "nvim --headless -u $initLuaPath +PlugClean! +PlugInstall +qall"
 }
 
 function Pack-NvimConfig {
@@ -48,18 +55,19 @@ function Pack-NvimConfig {
     Run-PlugCommands $packInitLuaPath
 
     $tempDir = Join-Path $env:TEMP ([System.Guid]::NewGuid().ToString())
-    New-Item -Path "$tempDir\nvim" -ItemType Directory -Force | Out-Null
-    New-Item -Path "$tempDir\nvim-data\site\autoload" -ItemType Directory -Force | Out-Null
+    Invoke-CommandWithEcho "New-Item -Path '$tempDir\nvim' -ItemType Directory -Force | Out-Null"
+    Invoke-CommandWithEcho "New-Item -Path '$tempDir\nvim-data\site\autoload' -ItemType Directory -Force | Out-Null"
 
-    Copy-Item $packInitLuaPath "$tempDir\nvim\init.lua"
-    Copy-Item $plugVimPath "$tempDir\nvim-data\site\autoload\plug.vim"
+    Invoke-CommandWithEcho "Copy-Item '$packInitLuaPath' '$tempDir\nvim\init.lua'"
+    Invoke-CommandWithEcho "Copy-Item '$plugVimPath' '$tempDir\nvim-data\site\autoload\plug.vim'"
 
     # Copy plugged directory excluding .git directories
-    robocopy $pluggedPath "$tempDir\nvim-data\plugged" /E /XD ".git" | Out-Null
+    Invoke-CommandWithEcho "New-Item -Path '$tempDir\nvim-data\plugged' -ItemType Directory -Force | Out-Null"
+    Invoke-CommandWithEcho "robocopy '$pluggedPath' '$tempDir\nvim-data\plugged' /E /XD '.git' | Out-Null"
 
     $packagePath = Join-Path $scriptDir $packageName
-    Compress-Archive -Path "$tempDir\*" -DestinationPath $packagePath -Force
-    Remove-Item -Recurse -Force $tempDir
+    Invoke-CommandWithEcho "Compress-Archive -Path '$tempDir\*' -DestinationPath '$packagePath' -Force"
+    Invoke-CommandWithEcho "Remove-Item -Recurse -Force '$tempDir'"
 
     Write-Host "Offline package created successfully: $packagePath"
 }
@@ -90,20 +98,18 @@ function Unpack-NvimConfig {
     }
 
     $tempDir = Join-Path $env:TEMP ([System.Guid]::NewGuid().ToString())
-    Expand-Archive -Path $packagePath -DestinationPath $tempDir
+    Invoke-CommandWithEcho "Expand-Archive -Path '$packagePath' -DestinationPath '$tempDir'"
 
-    New-Item -Path (Split-Path $unpackInitLuaPath) -ItemType Directory -Force | Out-Null
-    New-Item -Path (Split-Path $plugVimPath) -ItemType Directory -Force | Out-Null
-    New-Item -Path $pluggedPath -ItemType Directory -Force | Out-Null
+    Invoke-CommandWithEcho "New-Item -Path (Split-Path $unpackInitLuaPath) -ItemType Directory -Force | Out-Null"
+    Invoke-CommandWithEcho "New-Item -Path (Split-Path $plugVimPath) -ItemType Directory -Force | Out-Null"
+    Invoke-CommandWithEcho "New-Item -Path '$pluggedPath' -ItemType Directory -Force | Out-Null"
 
-    Copy-Item "$tempDir\nvim\init.lua" $unpackInitLuaPath -Force
-    Copy-Item "$tempDir\nvim-data\site\autoload\plug.vim" $plugVimPath -Force
-    robocopy "$tempDir\nvim-data\plugged" $pluggedPath /E | Out-Null
+    Invoke-CommandWithEcho "Copy-Item '$tempDir\nvim\init.lua' '$unpackInitLuaPath' -Force"
+    Invoke-CommandWithEcho "Copy-Item '$tempDir\nvim-data\site\autoload\plug.vim' '$plugVimPath' -Force"
+    Invoke-CommandWithEcho "robocopy '$tempDir\nvim-data\plugged' '$pluggedPath' /E | Out-Null"
 
-    Remove-Item -Recurse -Force $tempDir
+    Invoke-CommandWithEcho "Remove-Item -Recurse -Force '$tempDir'"
     Write-Host "Offline package installation complete."
-
-    Run-PlugCommands $unpackInitLuaPath
 }
 
 # Main script
