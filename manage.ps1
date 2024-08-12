@@ -1,6 +1,7 @@
 # PowerShell script for managing Neovim offline packages
 
-$packInitLuaPath = ".\init.lua"
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$packInitLuaPath = Join-Path $scriptDir "init.lua"
 $unpackInitLuaPath = "$env:LOCALAPPDATA\nvim\init.lua"
 $plugVimPath = "$env:LOCALAPPDATA\nvim-data\site\autoload\plug.vim"
 $pluggedPath = "$env:LOCALAPPDATA\nvim-data\plugged"
@@ -10,7 +11,7 @@ function Show-Usage {
     Write-Host "Usage: .\manage.ps1 {pack|unpack [path_to_package]} [-y]"
     Write-Host "  pack                     Create an offline package of Neovim configuration"
     Write-Host "  unpack [path_to_package] Extract and install the offline package"
-    Write-Host "                           If path is not specified, uses $packageName"
+    Write-Host "                           If path is not specified, uses $packageName in the script directory"
     Write-Host "  -y                       Force overwrite without prompting"
 }
 
@@ -56,15 +57,16 @@ function Pack-NvimConfig {
     # Copy plugged directory excluding .git directories
     robocopy $pluggedPath "$tempDir\nvim-data\plugged" /E /XD ".git" | Out-Null
 
-    Compress-Archive -Path "$tempDir\*" -DestinationPath $packageName -Force
+    $packagePath = Join-Path $scriptDir $packageName
+    Compress-Archive -Path "$tempDir\*" -DestinationPath $packagePath -Force
     Remove-Item -Recurse -Force $tempDir
 
-    Write-Host "Offline package created successfully: $packageName"
+    Write-Host "Offline package created successfully: $packagePath"
 }
 
 function Unpack-NvimConfig {
     param(
-        [string]$packagePath = $packageName,
+        [string]$packagePath = (Join-Path $scriptDir $packageName),
         [switch]$forceOverwrite
     )
 
@@ -119,7 +121,15 @@ switch ($args[0]) {
         Pack-NvimConfig
     }
     "unpack" {
-        $packagePath = if ($args.Count -gt 1) { $args[1] } else { $packageName }
+        $packagePath = if ($args.Count -gt 1) { 
+            if ([System.IO.Path]::IsPathRooted($args[1])) {
+                $args[1]
+            } else {
+                Join-Path $PWD $args[1]
+            }
+        } else { 
+            Join-Path $scriptDir $packageName 
+        }
         $forceOverwrite = $args -contains "-y"
         Unpack-NvimConfig -packagePath $packagePath -forceOverwrite:$forceOverwrite
     }

@@ -2,7 +2,8 @@
 
 set -e
 
-PACK_INIT_LUA_PATH="./init.lua"
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PACK_INIT_LUA_PATH="$SCRIPT_DIR/init.lua"
 UNPACK_INIT_LUA_PATH="$HOME/.config/nvim/init.lua"
 PLUG_VIM_PATH="${XDG_DATA_HOME:-$HOME/.local/share}/nvim/site/autoload/plug.vim"
 PLUGGED_PATH="${XDG_DATA_HOME:-$HOME/.local/share}/nvim/plugged"
@@ -13,7 +14,7 @@ show_usage() {
     echo "Usage: $0 {pack|unpack [path_to_package]} [-y]"
     echo "  pack                     Create an offline package of Neovim configuration"
     echo "  unpack [path_to_package] Extract and install the offline package"
-    echo "                           If path is not specified, uses $DEFAULT_PACKAGE_NAME"
+    echo "                           If path is not specified, uses $DEFAULT_PACKAGE_NAME in the script directory"
     echo "  -y                       Force overwrite without prompting"
 }
 
@@ -63,14 +64,15 @@ pack() {
     mkdir -p "$temp_dir/nvim-data/plugged"
     rsync -a --exclude='.git' "$PLUGGED_PATH/" "$temp_dir/nvim-data/plugged/"
 
-    tar -czf "$DEFAULT_PACKAGE_NAME" -C "$temp_dir" .
+    local package_path="$SCRIPT_DIR/$DEFAULT_PACKAGE_NAME"
+    tar -czf "$package_path" -C "$temp_dir" .
     rm -rf "$temp_dir"
-    echo "Offline package created successfully: $DEFAULT_PACKAGE_NAME"
+    echo "Offline package created successfully: $package_path"
 }
 
 # Function to unpack and install offline package
 unpack() {
-    local package_path="${1:-$DEFAULT_PACKAGE_NAME}"
+    local package_path="${1:-"$SCRIPT_DIR/$DEFAULT_PACKAGE_NAME"}"
     local force_overwrite=false
     if [ "$2" == "-y" ]; then
         force_overwrite=true
@@ -128,29 +130,33 @@ unpack() {
 }
 
 # Main script
-main() {
-    if [ $# -eq 0 ]; then
+if [ $# -eq 0 ]; then
+    show_usage
+    exit 1
+fi
+
+case "$1" in
+    pack)
+        if ! command -v nvim &> /dev/null; then
+            echo "Error: Neovim is not installed. Please install Neovim first."
+            exit 1
+        fi
+        pack
+        ;;
+    unpack)
+        if [ $# -gt 1 ] && [ "$2" != "-y" ]; then
+            if [[ "$2" = /* ]]; then
+                package_path="$2"
+            else
+                package_path="$PWD/$2"
+            fi
+        else
+            package_path="$SCRIPT_DIR/$DEFAULT_PACKAGE_NAME"
+        fi
+        unpack "$package_path" "${3:-}"
+        ;;
+    *)
         show_usage
         exit 1
-    fi
-
-    case "$1" in
-        pack)
-            if ! command -v nvim &> /dev/null; then
-                echo "Error: Neovim is not installed. Please install Neovim first."
-                exit 1
-            fi
-            pack
-            ;;
-        unpack)
-            unpack "${2:-}" "${3:-}"
-            ;;
-        *)
-            show_usage
-            exit 1
-            ;;
-    esac
-}
-
-# Run the main function
-main "$@"
+        ;;
+esac
