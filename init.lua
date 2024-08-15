@@ -122,13 +122,8 @@ local function setup_key_mappings()
     map('n', '<leader><leader>h', '<cmd>Telescope help_tags<CR>')
 
     -- NERDTree key mapping
-    local nerdtree_open = vim.fn.exists("t:NERDTreeBufName") == 1 and vim.fn.bufwinnr(vim.g.NERDTreeBufName) ~= -1
-    if nerdtree_open then
-        vim.cmd('NERDTreeClose')
-    else
-        vim.cmd('NERDTreeFind')
-        vim.cmd('wincmd p')
-    end
+    map('n', '<leader>n', ':NERDTreeFind<CR> :wincmd p<CR>')
+    map('n', '<leader>o', ':NERDTreeClose<CR>')
 
     -- TagBar key mapping
     map('n', '<leader>t', ':TagbarToggle<CR>')
@@ -191,10 +186,8 @@ local function setup_plugin_configs()
 
     -- NERDTree Configuration
     vim.cmd([[
-        autocmd VimEnter * if argc() == 0 | NERDTree | endif
-        autocmd BufEnter * if tabpagenr('$') == 1 && !argc() | NERDTreeFind | endif
-        autocmd FileType nerdtree setlocal cursorline
-        autocmd VimEnter * if argc() > 0 | wincmd p | endif
+        autocmd VimEnter * NERDTreeFind
+        autocmd VimEnter * wincmd p
     ]])
 end
 
