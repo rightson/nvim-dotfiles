@@ -185,8 +185,8 @@ local function setup_plugin_configs()
 
     -- NERDTree Configuration
     vim.cmd([[
-        autocmd VimEnter * NERDTree
-        autocmd BufEnter * if tabpagenr('$') == 1 && !argc() | NERDTree | endif
+        autocmd VimEnter * NERDTreeFind
+        autocmd BufEnter * if tabpagenr('$') == 1 && !argc() | NERDTreeFind | endif
         autocmd FileType nerdtree setlocal cursorline
         autocmd VimEnter * wincmd p
     ]])
