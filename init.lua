@@ -122,7 +122,13 @@ local function setup_key_mappings()
     map('n', '<leader><leader>h', '<cmd>Telescope help_tags<CR>')
 
     -- NERDTree key mapping
-    map('n', '<leader>n', ':NERDTreeFind<CR> :wincmd p<CR>')
+    local nerdtree_open = vim.fn.exists("t:NERDTreeBufName") == 1 and vim.fn.bufwinnr(vim.g.NERDTreeBufName) ~= -1
+    if nerdtree_open then
+        vim.cmd('NERDTreeClose')
+    else
+        vim.cmd('NERDTreeFind')
+        vim.cmd('wincmd p')
+    end
 
     -- TagBar key mapping
     map('n', '<leader>t', ':TagbarToggle<CR>')
