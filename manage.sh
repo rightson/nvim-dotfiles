@@ -21,6 +21,7 @@ show_usage() {
     echo "  pack                     Create an offline package of Neovim configuration"
     echo "  unpack [path_to_package] Extract and install the offline package"
     echo "                           If path is not specified, uses $DEFAULT_PACKAGE_NAME in the script directory"
+    echo "  install_plug             Download and install vim-plug"
     echo "  -y                       Force overwrite without prompting"
 }
 
@@ -133,6 +134,14 @@ unpack() {
     echo "Offline package installation complete."
 }
 
+# Function to install vim-plug
+install_plug() {
+    echo "Installing vim-plug..."
+    download_plug_vim
+    echo "vim-plug has been installed to $PLUG_VIM_PATH"
+    run_plug_commands "$PACK_INIT_LUA_PATH"
+}
+
 # Main script
 if [ $# -eq 0 ]; then
     show_usage
@@ -158,6 +167,9 @@ case "$1" in
             package_path="$SCRIPT_DIR/$DEFAULT_PACKAGE_NAME"
         fi
         unpack "$package_path" "${3:-}"
+        ;;
+    install_plug)
+        install_plug
         ;;
     *)
         show_usage
