@@ -257,6 +257,17 @@ local function setup_cursor_position_restoration()
     })
 end
 
+-- Load Local Lua Configuration
+local function load_local_config()
+    local local_config_path = vim.fn.stdpath('config') .. '/lua/local.lua'
+    local file = io.open(local_config_path, "r")
+    if file then
+        io.close(file)
+        -- Load the local.lua file
+        dofile(local_config_path)
+    end
+end
+
 
 -- Main Setup Function
 local function setup()
@@ -267,6 +278,7 @@ local function setup()
     setup_autocommands()
     setup_custom_functions()
     setup_cursor_position_restoration()
+    load_local_config()
 end
 
 -- Run the setup
