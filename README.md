@@ -47,7 +47,7 @@ Welcome to nvim-dotfiles, a minimalist Neovim configuration for those who apprec
 
 ## Configuration
 
-The main configuration file is `~/.config/nvim/init.lua`. You can modify this file to customize your Neovim experience further.
+The main configuration file is `~/.config/nvim/init.lua`. You can create/update ~/.config/nvim/lua/local.lua` file to customize your Neovim experience further.
 
 ## Key Mappings
 
