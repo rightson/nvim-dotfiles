@@ -3,8 +3,7 @@
 set -e
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PACK_INIT_LUA_PATH="$SCRIPT_DIR/init.lua"
-UNPACK_INIT_LUA_PATH="$HOME/.config/nvim/init.lua"
+NVIM_CONFIG_DIR="$HOME/.config/nvim"
 PLUG_VIM_PATH="${XDG_DATA_HOME:-$HOME/.local/share}/nvim/site/autoload/plug.vim"
 PLUGGED_PATH="${XDG_DATA_HOME:-$HOME/.local/share}/nvim/plugged"
 DEFAULT_PACKAGE_NAME="nvim-dotfile-offline.tar.gz"
@@ -21,56 +20,27 @@ show_usage() {
     echo "  pack                     Create an offline package of Neovim configuration"
     echo "  unpack [path_to_package] Extract and install the offline package"
     echo "                           If path is not specified, uses $DEFAULT_PACKAGE_NAME in the script directory"
-    echo "  install_plug             Download and install vim-plug"
     echo "  -y                       Force overwrite without prompting"
-}
-
-# Function to download plug.vim
-download_plug_vim() {
-    if [ -f "$PLUG_VIM_PATH" ]; then
-        echo "plug.vim already exists. Skipping download."
-    else
-        echo "Downloading plug.vim..."
-        execho curl -fLo "$PLUG_VIM_PATH" --create-dirs \
-            https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-    fi
-}
-
-# Function to run PlugClean and PlugInstall
-run_plug_commands() {
-    local init_lua_path="$1"
-    echo "Running :PlugClean and :PlugInstall..."
-    execho nvim --headless -u "$init_lua_path" +PlugClean! +PlugInstall +qall
 }
 
 # Function to create offline package
 pack() {
     echo "Creating offline package..."
-    echo "Source paths:"
-    echo "  init.lua: $PACK_INIT_LUA_PATH"
-    echo "  plug.vim: $PLUG_VIM_PATH"
-    echo "  plugged:  $PLUGGED_PATH"
-
-    if [ ! -f "$PACK_INIT_LUA_PATH" ]; then
-        echo "Error: init.lua not found at $PACK_INIT_LUA_PATH"
-        exit 1
-    fi
-
-    # Ensure plug.vim is downloaded
-    download_plug_vim
-
-    # Run PlugClean and PlugInstall with the local init.lua
-    run_plug_commands "$PACK_INIT_LUA_PATH"
-
-    local temp_dir=$(mktemp -d)
-    execho mkdir -p "$temp_dir/nvim" "$temp_dir/nvim-data/site/autoload"
     
-    execho cp "$PACK_INIT_LUA_PATH" "$temp_dir/nvim/"
-    execho cp "$PLUG_VIM_PATH" "$temp_dir/nvim-data/site/autoload/"
+    local temp_dir=$(mktemp -d)
+    local nvim_dir="$temp_dir/nvim"
+    local nvim_data_dir="$temp_dir/nvim-data"
+    
+    # Copy this repo (except the package file)
+    execho rsync -a --exclude="$DEFAULT_PACKAGE_NAME" "$SCRIPT_DIR/" "$nvim_dir/"
+    
+    # Copy plug.vim
+    execho mkdir -p "$nvim_data_dir/site/autoload"
+    execho cp "$PLUG_VIM_PATH" "$nvim_data_dir/site/autoload/"
     
     # Copy plugged directory excluding .git directories
-    execho mkdir -p "$temp_dir/nvim-data/plugged"
-    execho rsync -a --info=progress2 --exclude='.git' "$PLUGGED_PATH/" "$temp_dir/nvim-data/plugged/"
+    execho mkdir -p "$nvim_data_dir/plugged"
+    execho rsync -a --exclude='.git' "$PLUGGED_PATH/" "$nvim_data_dir/plugged/"
 
     local package_path="$SCRIPT_DIR/$DEFAULT_PACKAGE_NAME"
     execho tar -czf "$package_path" -C "$temp_dir" .
@@ -91,10 +61,6 @@ unpack() {
         exit 1
     fi
     echo "Unpacking and installing offline package from $package_path..."
-    echo "Destination paths:"
-    echo "  init.lua: $UNPACK_INIT_LUA_PATH"
-    echo "  plug.vim: $PLUG_VIM_PATH"
-    echo "  plugged:  $PLUGGED_PATH"
 
     if [ "$force_overwrite" = false ]; then
         read -p "Do you want to overwrite existing files? (y/N) " confirm
@@ -105,41 +71,27 @@ unpack() {
     fi
 
     local temp_dir=$(mktemp -d)
+    execho tar -xzf "$package_path" -C "$temp_dir"
 
-    # Extract based on file extension
-    case "$package_path" in
-        *.tar.gz)
-            execho tar -xzf "$package_path" -C "$temp_dir"
-            ;;
-        *.zip)
-            execho unzip -q "$package_path" -d "$temp_dir"
-            ;;
-        *)
-            echo "Error: Unsupported file format. Use .tar.gz or .zip"
-            execho rm -rf "$temp_dir"
-            exit 1
-            ;;
-    esac
+    # Copy nvim directory if it doesn't exist
+    if [ ! -d "$NVIM_CONFIG_DIR" ]; then
+        echo "Copying Neovim configuration to $NVIM_CONFIG_DIR..."
+        execho mkdir -p "$NVIM_CONFIG_DIR"
+        execho cp -R "$temp_dir/nvim/." "$NVIM_CONFIG_DIR/"
+    else
+        echo "$NVIM_CONFIG_DIR already exists. Skipping Neovim configuration copy."
+    fi
 
-    # Copy files to their respective locations
-    execho mkdir -p "$(dirname "$UNPACK_INIT_LUA_PATH")"
+    # Copy plug.vim
     execho mkdir -p "$(dirname "$PLUG_VIM_PATH")"
-    execho mkdir -p "$PLUGGED_PATH"
-
-    execho cp "$temp_dir/nvim/init.lua" "$UNPACK_INIT_LUA_PATH"
     execho cp "$temp_dir/nvim-data/site/autoload/plug.vim" "$PLUG_VIM_PATH"
-    execho rsync -a --info=progress2 "$temp_dir/nvim-data/plugged/" "$PLUGGED_PATH/"
+
+    # Copy plugged directory
+    execho mkdir -p "$PLUGGED_PATH"
+    execho rsync -a "$temp_dir/nvim-data/plugged/" "$PLUGGED_PATH/"
 
     execho rm -rf "$temp_dir"
     echo "Offline package installation complete."
-}
-
-# Function to install vim-plug
-install_plug() {
-    echo "Installing vim-plug..."
-    download_plug_vim
-    echo "vim-plug has been installed to $PLUG_VIM_PATH"
-    run_plug_commands "$PACK_INIT_LUA_PATH"
 }
 
 # Main script
@@ -150,10 +102,6 @@ fi
 
 case "$1" in
     pack)
-        if ! command -v nvim &> /dev/null; then
-            echo "Error: Neovim is not installed. Please install Neovim first."
-            exit 1
-        fi
         pack
         ;;
     unpack)
@@ -167,9 +115,6 @@ case "$1" in
             package_path="$SCRIPT_DIR/$DEFAULT_PACKAGE_NAME"
         fi
         unpack "$package_path" "${3:-}"
-        ;;
-    install_plug)
-        install_plug
         ;;
     *)
         show_usage
