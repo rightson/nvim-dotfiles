@@ -102,11 +102,11 @@ local function setup_key_mappings()
 
     -- LSP key mappings
     map('n', '<F12>', '<cmd>lua vim.lsp.buf.definition()<CR>')
-    map('n', 'gd', '<cmd>lua vim.lsp.buf.definition()<CR>')
+    map('n', '<leader>gd', '<cmd>lua vim.lsp.buf.definition()<CR>')
     map('n', 'K', '<cmd>lua vim.lsp.buf.hover()<CR>')
-    map('n', 'gi', '<cmd>lua vim.lsp.buf.implementation()<CR>')
-    map('n', 'gr', '<cmd>lua vim.lsp.buf.references()<CR>')
-    map('n', 'gf', '<cmd>lua vim.lsp.buf.format()<CR>')
+    map('n', '<leader>gi', '<cmd>lua vim.lsp.buf.implementation()<CR>')
+    map('n', '<leader>gr', '<cmd>lua vim.lsp.buf.references()<CR>')
+    map('n', '<leader>gf', '<cmd>lua vim.lsp.buf.format()<CR>')
 
     -- hop.nvim key mappings
     map('n', '<leader>w', ':HopWord<CR>')
