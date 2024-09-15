@@ -1,2 +1,2 @@
-nvim-dotfile-offline.zip
-nvim-dotfile-offline.tar.gz
+*-offline.*
+lua/local.lua

@@ -14,28 +14,30 @@ function Invoke-CommandWithEcho {
 }
 
 function Show-Usage {
-    Write-Host "Usage: .\manage.ps1 {pack|unpack [path_to_package]} [-y]"
+    Write-Host "Usage: .\manage.ps1 {pack|unpack [path_to_package]|install-plug|install-plugins} [-y]"
     Write-Host "  pack                     Create an offline package of Neovim configuration"
     Write-Host "  unpack [path_to_package] Extract and install the offline package"
     Write-Host "                           If path is not specified, uses $packageName in the script directory"
-    Write-Host "  -y                       Force overwrite without prompting"
+    Write-Host "  install-plug             Install vim-plug"
+    Write-Host "  install-plugins          Install plugins using vim-plug"
+    Write-Host "  -y                       Force overwrite without prompting (for unpack)"
 }
 
 function Pack-NvimConfig {
     Write-Host "Creating offline package..."
-    
+
     $tempDir = Join-Path $env:TEMP ([System.Guid]::NewGuid().ToString())
     $nvimDir = Join-Path $tempDir "nvim"
     $nvimDataDir = Join-Path $tempDir "nvim-data"
-    
+
     # Copy this repo (except the package file)
     Invoke-CommandWithEcho "New-Item -Path $nvimDir -ItemType Directory -Force | Out-Null"
     Invoke-CommandWithEcho "Get-ChildItem -Path $scriptDir -Exclude $packageName | Copy-Item -Destination $nvimDir -Recurse -Force"
-    
+
     # Copy plug.vim
     Invoke-CommandWithEcho "New-Item -Path $nvimDataDir\site\autoload -ItemType Directory -Force | Out-Null"
     Invoke-CommandWithEcho "Copy-Item $plugVimPath $nvimDataDir\site\autoload\plug.vim -Force"
-    
+
     # Copy plugged directory excluding .git directories
     Invoke-CommandWithEcho "New-Item -Path $nvimDataDir\plugged -ItemType Directory -Force | Out-Null"
     Invoke-CommandWithEcho "robocopy $pluggedPath $nvimDataDir\plugged /E /XD '.git' | Out-Null"
@@ -44,6 +46,20 @@ function Pack-NvimConfig {
     Invoke-CommandWithEcho "Compress-Archive -Path $tempDir\* -DestinationPath $packagePath -Force"
     Invoke-CommandWithEcho "Remove-Item -Recurse -Force $tempDir"
     Write-Host "Offline package created successfully: $packagePath"
+}
+
+function Install-VimPlug {
+    Write-Host "Installing vim-plug..."
+    $uri = 'https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
+    New-Item -Path (Split-Path $plugVimPath) -ItemType Directory -Force | Out-Null
+    Invoke-WebRequest -Uri $uri -OutFile $plugVimPath
+    Write-Host "vim-plug installed successfully."
+}
+
+function Install-NvimPlugins {
+    Write-Host "Installing plugins..."
+    Invoke-CommandWithEcho "nvim --headless +PlugInstall +qall"
+    Write-Host "Plugins installed successfully."
 }
 
 function Unpack-NvimConfig {
@@ -102,17 +118,25 @@ switch ($args[0]) {
         Pack-NvimConfig
     }
     "unpack" {
-        $packagePath = if ($args.Count -gt 1 -and $args[1] -ne "-y") { 
+        $params = @{}
+        $packagePath = if ($args.Count -gt 1 -and $args[1] -notmatch '^-') {
             if ([System.IO.Path]::IsPathRooted($args[1])) {
                 $args[1]
             } else {
                 Join-Path $PWD $args[1]
             }
-        } else { 
-            Join-Path $scriptDir $packageName 
+        } else {
+            Join-Path $scriptDir $packageName
         }
-        $forceOverwrite = $args -contains "-y"
-        Unpack-NvimConfig -packagePath $packagePath -forceOverwrite:$forceOverwrite
+        $params['packagePath'] = $packagePath
+        $params['forceOverwrite'] = $args -contains "-y"
+        Unpack-NvimConfig @params
+    }
+    "install-plug" {
+        Install-VimPlug
+    }
+    "install-plugins" {
+        Install-NvimPlugins
     }
     default {
         Show-Usage
