@@ -16,28 +16,30 @@ execho() {
 
 # Function to show usage
 show_usage() {
-    echo "Usage: $0 {pack|unpack [path_to_package]} [-y]"
+    echo "Usage: $0 {pack|unpack [path_to_package]|install-plug|install-plugins} [-y]"
     echo "  pack                     Create an offline package of Neovim configuration"
     echo "  unpack [path_to_package] Extract and install the offline package"
     echo "                           If path is not specified, uses $DEFAULT_PACKAGE_NAME in the script directory"
-    echo "  -y                       Force overwrite without prompting"
+    echo "  install-plug             Install vim-plug"
+    echo "  install-plugins          Install plugins using vim-plug"
+    echo "  -y                       Force overwrite without prompting (for unpack)"
 }
 
 # Function to create offline package
 pack() {
     echo "Creating offline package..."
-    
+
     local temp_dir=$(mktemp -d)
     local nvim_dir="$temp_dir/nvim"
     local nvim_data_dir="$temp_dir/nvim-data"
-    
+
     # Copy this repo (except the package file)
     execho rsync -a --exclude="$DEFAULT_PACKAGE_NAME" "$SCRIPT_DIR/" "$nvim_dir/"
-    
+
     # Copy plug.vim
     execho mkdir -p "$nvim_data_dir/site/autoload"
     execho cp "$PLUG_VIM_PATH" "$nvim_data_dir/site/autoload/"
-    
+
     # Copy plugged directory excluding .git directories
     execho mkdir -p "$nvim_data_dir/plugged"
     execho rsync -a --exclude='.git' "$PLUGGED_PATH/" "$nvim_data_dir/plugged/"
@@ -48,10 +50,26 @@ pack() {
     echo "Offline package created successfully: $package_path"
 }
 
+# Function to install vim-plug
+install_plug() {
+    echo "Installing vim-plug..."
+    curl -fLo "${PLUG_VIM_PATH}" --create-dirs \
+        https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+    echo "vim-plug installed successfully."
+}
+
+# Function to install plugins
+install_plugins() {
+    echo "Installing plugins..."
+    nvim --headless +PlugInstall +qall
+    echo "Plugins installed successfully."
+}
+
 # Function to unpack and install offline package
 unpack() {
     local package_path="${1:-"$SCRIPT_DIR/$DEFAULT_PACKAGE_NAME"}"
     local force_overwrite=false
+
     if [ "$2" == "-y" ]; then
         force_overwrite=true
     fi
@@ -105,16 +123,14 @@ case "$1" in
         pack
         ;;
     unpack)
-        if [ $# -gt 1 ] && [ "$2" != "-y" ]; then
-            if [[ "$2" = /* ]]; then
-                package_path="$2"
-            else
-                package_path="$PWD/$2"
-            fi
-        else
-            package_path="$SCRIPT_DIR/$DEFAULT_PACKAGE_NAME"
-        fi
-        unpack "$package_path" "${3:-}"
+        shift
+        unpack "$@"
+        ;;
+    install-plug)
+        install_plug
+        ;;
+    install-plugins)
+        install_plugins
         ;;
     *)
         show_usage
