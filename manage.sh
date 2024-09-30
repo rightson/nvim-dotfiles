@@ -16,12 +16,13 @@ execho() {
 
 # Function to show usage
 show_usage() {
-    echo "Usage: $0 {pack|unpack [path_to_package]|install-plug|install-plugins} [-y]"
+    echo "Usage: $0 {pack|unpack [path_to_package]|install-plug|install-plugins|install-lsp-servers} [-y]"
     echo "  pack                     Create an offline package of Neovim configuration"
     echo "  unpack [path_to_package] Extract and install the offline package"
     echo "                           If path is not specified, uses $DEFAULT_PACKAGE_NAME in the script directory"
     echo "  install-plug             Install vim-plug"
     echo "  install-plugins          Install plugins using vim-plug"
+    echo "  install-lsp-servers      Install lsp servers using npm"
     echo "  -y                       Force overwrite without prompting (for unpack)"
 }
 
@@ -63,6 +64,13 @@ install_plugins() {
     echo "Installing plugins..."
     nvim --headless +PlugInstall +qall
     echo "Plugins installed successfully."
+}
+
+# Function to install lsp servers
+install_lsp_servers() {
+    echo "Installing lsp servers..."
+    npm install -g pyright typescript typescript-language-server vscode-langservers-extracted
+    echo "lsp servers installed successfully."
 }
 
 # Function to unpack and install offline package
@@ -131,6 +139,9 @@ case "$1" in
         ;;
     install-plugins)
         install_plugins
+        ;;
+    install-lsp-servers)
+        install_lsp_servers
         ;;
     *)
         show_usage
