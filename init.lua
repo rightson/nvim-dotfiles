@@ -191,10 +191,10 @@ local function setup_plugin_configs()
     }
 
     -- NERDTree Configuration
-    vim.cmd([[
-        autocmd VimEnter * NERDTreeFind
-        autocmd VimEnter * wincmd p
-    ]])
+    -- vim.cmd([[
+    --    autocmd VimEnter * NERDTreeFind
+    --    autocmd VimEnter * wincmd p
+    -- ]])
 end
 
 -- Autocommands
