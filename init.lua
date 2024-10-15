@@ -22,6 +22,7 @@ local function setup_plugins()
     Plug('tpope/vim-surround')
     Plug('NLKNguyen/papercolor-theme')
     Plug('tell-k/vim-autopep8')
+    Plug('lervag/vimtex')
 
     vim.call('plug#end')
 end
