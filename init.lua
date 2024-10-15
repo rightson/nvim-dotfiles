@@ -132,8 +132,12 @@ local function setup_key_mappings()
     -- Neo-Zoom key mapping
     map('n', '<leader>z', ':NeoZoomToggle<CR>')
 
-    -- Vimtex
-    map('n', '<leader>v', ':VimtexView<CR>')
+    -- vimtex
+    if vim.loop.os_uname().sysname == "Darwin" then
+        map('n', '<leader>v', ':VimtexView<CR>:!osascript -e \'tell application "Skim" to activate\'<CR>')
+    else
+        map('n', '<leader>v', ':VimtexView<CR>')
+    end
 end
 
 -- Plugin Configurations
@@ -200,7 +204,7 @@ local function setup_plugin_configs()
     --    autocmd VimEnter * wincmd p
     -- ]])
 
-    -- Vimtex
+    -- vimtex
     vim.g.vimtex_view_method = 'skim'
 end
 
