@@ -133,11 +133,17 @@ local function setup_key_mappings()
     map('n', '<leader>z', ':NeoZoomToggle<CR>')
 
     -- vimtex
-    if vim.loop.os_uname().sysname == "Darwin" then
-        map('n', '<leader>v', ':VimtexView<CR>:!osascript -e \'tell application "Skim" to activate\'<CR>')
-    else
-        map('n', '<leader>v', ':VimtexView<CR>')
-    end
+    vim.api.nvim_create_autocmd('FileType', {
+        pattern = 'tex',
+        callback = function()
+            if vim.loop.os_uname().sysname == "Darwin" then
+                map('n', '<leader>v', ':VimtexView<CR>:!osascript -e \'tell application "Skim" to activate\'<CR>')
+            else
+                map('n', '<leader>v', ':VimtexView<CR>')
+            end
+            map('n', '<leader>t', ':VimtexTocToggle<CR> ')
+        end
+    })
 end
 
 -- Plugin Configurations
