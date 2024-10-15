@@ -131,6 +131,9 @@ local function setup_key_mappings()
 
     -- Neo-Zoom key mapping
     map('n', '<leader>z', ':NeoZoomToggle<CR>')
+
+    -- Vimtex
+    map('n', '<leader>v', ':VimtexView<CR>')
 end
 
 -- Plugin Configurations
@@ -196,6 +199,9 @@ local function setup_plugin_configs()
     --    autocmd VimEnter * NERDTreeFind
     --    autocmd VimEnter * wincmd p
     -- ]])
+
+    -- Vimtex
+    vim.g.vimtex_view_method = 'skim'
 end
 
 -- Autocommands
