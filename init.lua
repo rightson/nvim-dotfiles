@@ -64,7 +64,8 @@ local function setup_general_settings()
     vim.o.ignorecase = false
     vim.o.backspace = 'indent,eol,start'
     vim.o.laststatus = 2
-
+    vim.env.FZF_DEFAULT_COMMAND = [[find . \( -name node_modules -o -name .git \) -prune -o -print]]
+    
     -- GUI specific settings
     if vim.fn.has('gui_running') == 1 then
         vim.o.clipboard = 'unnamedplus'
