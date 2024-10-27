@@ -39,6 +39,7 @@ local function setup_general_settings()
     vim.o.autoread = true
     vim.o.autowrite = true
     vim.o.clipboard = 'unnamedplus'
+    vim.o.paste = true
     --- vim.o.pastetoggle = '<F7>'
     vim.o.mouse = 'a'
     --- vim.o.vb = true
