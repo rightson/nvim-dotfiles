@@ -20,6 +20,7 @@ show_usage() {
     echo "  pack                     Create an offline package of Neovim configuration"
     echo "  unpack [path_to_package] Extract and install the offline package"
     echo "                           If path is not specified, uses $DEFAULT_PACKAGE_NAME in the script directory"
+    echo "  install                  Install vim-plug, plugins, and lsp servers"
     echo "  install-plug             Install vim-plug"
     echo "  install-plugins          Install plugins using vim-plug"
     echo "  install-lsp-servers      Install lsp servers using npm"
@@ -133,6 +134,11 @@ case "$1" in
     unpack)
         shift
         unpack "$@"
+        ;;
+    install)
+        install_plug
+        install_plugins
+        install_lsp_servers
         ;;
     install-plug)
         install_plug
