@@ -18,6 +18,7 @@ function Show-Usage {
     Write-Host "  pack                     Create an offline package of Neovim configuration"
     Write-Host "  unpack [path_to_package] Extract and install the offline package"
     Write-Host "                           If path is not specified, uses $packageName in the script directory"
+    Write-Host "  install                  Install vim-plug, plugins, and lsp servers"
     Write-Host "  install-plug             Install vim-plug"
     Write-Host "  install-plugins          Install plugins using vim-plug"
     Write-Host "  install-lsp-servers      Install LSP servers using npm"
@@ -69,6 +70,11 @@ switch ($args[0]) {
         $params['packagePath'] = $packagePath
         $params['forceOverwrite'] = $args -contains "-y"
         Unpack-NvimConfig @params
+    }
+    "install" {
+        Install-VimPlug
+        Install-NvimPlugins
+        Install-LspServers
     }
     "install-plug" {
         Install-VimPlug
