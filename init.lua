@@ -66,7 +66,7 @@ local function setup_general_settings()
     vim.o.backspace = 'indent,eol,start'
     vim.o.laststatus = 2
     vim.env.FZF_DEFAULT_COMMAND = [[find . \( -name node_modules -o -name .git \) -prune -o -print]]
-    
+
     -- GUI specific settings
     if vim.fn.has('gui_running') == 1 then
         vim.o.clipboard = 'unnamedplus'
@@ -288,8 +288,11 @@ local function load_local_config()
     local file = io.open(local_config_path, "r")
     if file then
         io.close(file)
-        -- Load the local.lua file
-        dofile(local_config_path)
+        vim.defer_fn(function()
+            vim.api.nvim_command("colorscheme PaperColor")
+            -- Load the local.lua file
+            dofile(local_config_path)
+        end, 1)
     end
 end
 
