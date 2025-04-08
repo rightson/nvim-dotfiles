@@ -306,7 +306,7 @@ local function setup()
     setup_autocommands()
     setup_custom_functions()
     setup_cursor_position_restoration()
-    load_local_config()
+    vim.defer_fn(load_local_config, 0)
 end
 
 -- Run the setup
