@@ -25,7 +25,67 @@ function Show-Usage {
     Write-Host "  -y                       Force overwrite without prompting (for unpack)"
 }
 
-# ... [Other functions remain unchanged] ...
+# Function to install vim-plug
+function Install-VimPlug {
+    Write-Host "Installing vim-plug..."
+    
+    # Create the necessary directories if they don't exist
+    if (-not (Test-Path $plugVimPath)) {
+        New-Item -ItemType Directory -Path (Split-Path $plugVimPath -Parent) -Force
+    }
+
+    # Download vim-plug
+    Invoke-WebRequest -Uri "https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim" -OutFile $plugVimPath
+
+    Write-Host "vim-plug installed successfully."
+}
+
+# Function to install Neovim plugins using vim-plug
+function Install-NvimPlugins {
+    Write-Host "Installing Neovim plugins..."
+    
+    # Ensure Neovim is installed
+    if (!(Get-Command nvim -ErrorAction SilentlyContinue)) {
+        Write-Host "Error: Neovim is not installed. Please install Neovim before running this command." -ForegroundColor Red
+        exit 1
+    }
+
+    # Install plugins using vim-plug
+    Invoke-CommandWithEcho "nvim +PlugInstall +qall"
+
+    Write-Host "Neovim plugins installed successfully."
+}
+
+# Function to pack Neovim configuration
+function Pack-NvimConfig {
+    Write-Host "Packing Neovim configuration..."
+    
+    # Create a zip package of the Neovim configuration
+    Compress-Archive -Path $nvimConfigDir -DestinationPath (Join-Path $scriptDir $packageName)
+
+    Write-Host "Neovim configuration packed successfully."
+}
+
+# Function to unpack Neovim configuration
+function Unpack-NvimConfig {
+    param(
+        [string]$packagePath,
+        [bool]$forceOverwrite = $false
+    )
+
+    Write-Host "Unpacking Neovim configuration from $packagePath..."
+
+    # Check if the destination directory exists
+    if (Test-Path $nvimConfigDir -and !$forceOverwrite) {
+        Write-Host "Error: Destination directory already exists. Use -y to force overwrite." -ForegroundColor Red
+        exit 1
+    }
+
+    # Extract the zip package
+    Expand-Archive -Path $packagePath -DestinationPath $nvimConfigDir -Force
+
+    Write-Host "Neovim configuration unpacked successfully."
+}
 
 function Install-LspServers {
     Write-Host "Installing LSP servers..."
